@@ -2,6 +2,7 @@ package com.example.lab5bluetooth2;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
@@ -10,6 +11,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -60,8 +62,16 @@ public class MainActivity extends AppCompatActivity {
         scanBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(TAG, "Permission already granted, initiating scan");
-                BA.startDiscovery();
+                //Check bluetooth is on before scanning
+                if (BA.isEnabled()) {
+                    Log.d(TAG, "Permission already granted, Bluetooth is on, initiating scan");
+                    BA.startDiscovery();
+                } else {
+                    //run Alert Dialog
+                    BTAlertDialog();
+                    Log.d(TAG, "Permission already granted,Bluetooth not on triggering alert");
+                }
+
             }
         });
 
@@ -81,6 +91,32 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(BTrx, filter);
     }
 
+    //create Bluetooth Alert Dialog
+    private void BTAlertDialog()
+    {
+        //Create Alert Dialog
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        // Add the buttons
+        builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                BA.enable();
+                Log.d(TAG, "Bluetooth Enabled");
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                Log.d(TAG, "User Cancelled Bluetooth request");
+            }
+        });
+        builder.setMessage("Please turn on Bluetooth to use scanner")
+                .setTitle("Alert");
+
+        // Create the AlertDialog
+        AlertDialog dialog = builder.create();
+        //Start the dialog
+        dialog.show();
+    }
+
     private boolean hasPermission() {
         //return the permission
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
@@ -97,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     // Send a toast message to the user telling them they will not be able to use the app without allowing fine location permission.
                     // There are multiple ways to do this, view the textbook for more information https://ebookcentral-proquest-com.ez.library.latrobe.edu.au/lib/latrobe/reader.action?docID=6642493&ppg=631
-                    Toast.makeText(this, "Essential permission not granted please restart the app to try again",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Essential permission not granted please restart the app to try again", Toast.LENGTH_SHORT).show();
                 }
             });
 
@@ -107,8 +143,7 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             //Finding devices
-            if (BluetoothDevice.ACTION_FOUND.equals(action))
-            {
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 // Get the BluetoothDevice object from the Intent
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 Log.d(TAG, "Found: " + device.getName() + " " + device.getAddress());
